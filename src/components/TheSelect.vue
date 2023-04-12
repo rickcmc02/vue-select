@@ -1,10 +1,11 @@
 <template>
-  <div>
+  <section id="select-section">
     <div v-for="(group, idx) in selectData?.groupList" :key="group?.title">
       <select
         v-if="group"
         :name="group.title"
         :disabled="idx > selectedOptions.length"
+        class="select-group"
         @change="($event) => selectHandler($event, idx)"
       >
         <option disabled selected>{{ group.title }}</option>
@@ -15,11 +16,15 @@
           :value="option"
         >
           {{ option }}
-          {{ checkNums(option, idx) === 0 ? "(품절)" : ""}}
+          {{ checkNums(option, idx) === 0
+            ? "(품절)"
+            : idx === selectData.groupList?.length - 1
+            ? `(${checkNums(option, idx)}개 구매가능)`
+            : ""}}
         </option>
       </select>
     </div>
-  </div>
+  </section>
 </template>
 
 <script>
@@ -31,35 +36,59 @@ export default {
 <script setup>
 import { ref, onMounted } from "vue";
 import { getSizeColorOptions } from "../api/index";
-const resultData = await getSizeColorOptions();
+
+const props = defineProps({
+  category: {
+    Type: String,
+    default: "",
+  }
+})
+
+const resultData = await getSizeColorOptions(props.category);
 const selectData = resultData?.data;
 
 const selectedOptions = ref([]);
 const leftNumber = ref(0);
 
 // set Base Group Dictionary
-let defDict = { value: 0 };
+let defDict = { count: 0 };
 [...selectData.groupList].reverse().forEach((group) => {
   let newDict = {};
   group.options.forEach((option) => {
     newDict[option] = { ...defDict };
   });
-  defDict = { ...newDict, value: 0 };
+  defDict = { ...newDict, count: 0 };
 });
 
-// add value to Base Group Dictionary
+const deepCopyObject = (obj) => {
+  let clone = {};
+  for (let key in obj) {
+    if (typeof obj[key] === "object" && obj[key] !== null) {
+      clone[key] = deepCopyObject(obj[key]);
+    } else {
+      clone[key] = obj[key];
+    }
+  }
+  return clone;
+};
+defDict = deepCopyObject(defDict);
+
+// add count to base group dictionary
 selectData.countList.forEach((count) => {
   let tmpCombi = count.combination;
   let tmpCnt = count.remainCount;
   let pastInnerDict = defDict;
   for (let level = 0; level < tmpCombi.length; level++) {
-    pastInnerDict.value += tmpCnt;
+    pastInnerDict.count += tmpCnt;
     let tmpCondition = tmpCombi[level];
     pastInnerDict = pastInnerDict[tmpCondition];
+    if (level === tmpCombi.length - 1) {
+      pastInnerDict.count = tmpCnt;
+    }
   }
 });
 
-// check value for each options
+// check count for each options
 const checkNums = (option, level) => {
   let remainCnt = 0;
   let tmpSelected = defDict;
@@ -68,7 +97,7 @@ const checkNums = (option, level) => {
     for (let l = 0; l < level; l++) {
       tmpSelected = tmpSelected[tmpSelOps[l]];
     };
-    remainCnt = tmpSelected[option]?.value;
+    remainCnt = tmpSelected[option]?.count;
   }
   return remainCnt;
 };
@@ -77,14 +106,23 @@ const checkNums = (option, level) => {
 const selectHandler = (selected, level) => {
   let tmpSelOps = selectedOptions.value;
   let tmpSelected = selected.target.value;
-  if (tmpSelOps.length === level) {
-    tmpSelOps.push(tmpSelected);
-  } else if (tmpSelOps.length > level) {
-    tmpSelOps[level] = tmpSelected;
-    tmpSelOps.slice(0, level + 1);
-  } else {
-    alert("선택 오류입니다.");
-  }
+  if (tmpSelOps.length > level) tmpSelOps = tmpSelOps.slice(0, level);
+  tmpSelOps.push(tmpSelected);
   selectedOptions.value = tmpSelOps;
 };
 </script>
+
+<style>
+#select-section {
+  padding: 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.select-group {
+  width: 160px;
+  height: 32px;
+  margin: 8px 0;
+}
+</style>

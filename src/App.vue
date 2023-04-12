@@ -1,26 +1,30 @@
 <script setup>
-import HelloWorld from "./components/HelloWorld.vue";
+import HelloCroket from "./components/HelloCroket.vue";
 import TheSelect from "./components/TheSelect.vue";
 </script>
 
 <template>
-  <!-- <header>
+  <header>
     <img
       alt="Vue logo"
       class="logo"
-      src="./assets/logo.svg"
+      src="https://image.rocketpunch.com/company/38438/yolo-2_logo_1640049226.png?s=400x400&t=inside"
       width="125"
       height="125"
+      style="border-radius: 10px"
     />
 
     <div class="wrapper">
-      <HelloWorld msg="You did it!" />
+      <HelloCroket msg="croket" />
     </div>
-  </header> -->
+  </header>
 
   <main>
     <Suspense>
-      <TheSelect />
+      <TheSelect category="default" />
+    </Suspense>
+    <Suspense>
+      <TheSelect category="doll" />
     </Suspense>
   </main>
 </template>
